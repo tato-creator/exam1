@@ -67,13 +67,21 @@ import arviz as az              # type: ignore
 # - age death: age at death
 # - repro_active: reproductive activity (yes/no)
 
-pass
+hib = pd.read_csv('hibernation.csv', true_values=['yes'], false_values=['no'], 
+                  parse_dates=['hibstart', 'hibend', 'hibendyearbefore'], date_format="%d.%m.%y")
+hib.head()
+
+assert hib['hibstart'].dtype != str and hib['hibstart'].iloc[0].month == 8
+assert hib['repro_active'].dtype == bool
 
 # ### Exercise 2 (max 4 points)
 #
 # Compute the total number of hibernation observations for males and females separately. Then, for each diet type (medium, high fat, protein), calculate what percentage of observations come from males vs females. To get full marks, do not use explicit loops.
 
-pass
+hib.groupby('sex').count()['a name']
+
+100 * hib.groupby(['diet', 'sex']).size() / hib.groupby('diet').size()
+
 
 # ### Exercise 3 (max 6 points)
 #
@@ -83,7 +91,25 @@ pass
 #
 # To get full marks, you should declare correctly the type hints (the signature of the function) and add a doctest string with at least to examples.
 
-pass
+def moving_average(series: pd.Series, window: int) -> pd.Series:
+    """
+    Compute the moving (rolling) average, with the given window.  
+        
+    >>> s = pd.Series([10.0, 20.0, 30.0, 40.0, 50.0])
+    >>> result = moving_average(s, 3)
+    >>> list(result)
+    [20.0, 30.0, 40.0]
+    >>> s2 = pd.Series([1.0, 2.0, 3.0, 4.0])
+    >>> result = moving_average(s2, 2)
+    >>> list(result)
+    [1.5, 2.5, 3.5]
+    """
+    r: list[float] = []
+    for i in range(len(series)-window+1):
+        r.append(series[i:i+window].mean())
+    return pd.Series(r)
+
+
 
 import doctest
 doctest.testmod()
@@ -92,25 +118,50 @@ doctest.testmod()
 #
 # Apply the function defined in Exercise 3 to the data in columns `bm_before` and `bm_after`, both in ascending order, with window size 4. To get full marks, do not use explicit loops.
 
-pass
+hib[['bm_before', 'bm_after']].apply(lambda col: moving_average(col.sort_values(), 4), axis=0)
 
 # ### Exercise 5 (max 3 points)
 #
 # Add a new column called `mass_loss_per_day` that represents the absolute mass lost during hibernation (bm_before - bm_after) per day (hibdur_days). Compute the mean of `mass_loss_per day` for each diet type.
 
-pass
+hib['mass_loss_per_day'] = (hib['bm_before'] - hib['bm_after']) / hib['hibdur days']
+hib.groupby(['diet'])['mass_loss_per_day'].mean()
 
 # ### Exercise 6 (max 4 points)
 #
 # Make a scatter plot of days of hibernation vs. age at death. Each point should have a different color for males and females. Put proper labels and a legend.
 
-pass
+# +
+fig, ax = plt.subplots(figsize=(10, 6))
+males = hib[hib['sex'] == 'm']
+females = hib[hib['sex'] == 'f']
+
+
+ax.scatter(males['hibdur days'], males['age death'], alpha=0.6, label='males')
+ax.scatter(females['hibdur days'], females['age death'], alpha=0.6, label='females')
+
+ax.set_xlabel('Days of hibernation')
+ax.set_ylabel('Age at death')
+ax.legend()
+
+fig.tight_layout()
+# -
 
 # ### Exercise 7 (max 5 points)
 #
 # Plot on the same axes the trends of change for each animal ('a name') of the length of hibernation ('hibdur day') along the years in which the data were collected. Use a legend to distinguish the lines. 
 
-pass
+# +
+fig, ax = plt.subplots(figsize=(10, 10))
+
+for r in hib.groupby('a name')[['hibdur days', 'year']].agg(lambda g: list(g)).itertuples():
+    ax.plot(r.year, r._1, marker='o', label=r.Index)
+
+ax.set_xlabel('Year')
+ax.set_ylabel('Hibernation days')
+ax.legend(title="a name", ncol=5, fontsize='small', bbox_to_anchor=(1, 1))
+fig.tight_layout()
+# -
 
 # ### Exercise 8 (max 4 points)
 #
@@ -123,6 +174,19 @@ pass
 #
 # Use PyMC to sample the posterior distributions after having seen the actual values for `bm_after`. Plot the posterior with `az.plot_posterior`.
 
-pass
+data = hib[(hib['sex'] == 'f') & hib['repro_active']].dropna()
+with pm.Model() as model:
+    a = pm.Normal('alpha', 150, 50)
+    b = pm.Normal('beta', 0, 10)
+    s = pm.Exponential('lam', 0.1)
+
+    D = data['hibdur days']
+
+    pm.Normal('bm_after', mu=a + b*D, sigma=s, observed=data['bm_after'])
+
+    idata = pm.sample(seed=6666)
+
+
+_ = az.plot_posterior(idata)
 
 
