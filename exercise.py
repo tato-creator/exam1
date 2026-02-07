@@ -125,12 +125,19 @@ doctest.testmod()
 # ### Exercise 4 (max 2 points)
 #
 # Apply the function defined in Exercise 3 to the column `bm_before`. To get full marks, do not use explicit loops.
+hib['bm_before_ma3'] = moving_average_3(hib['bm_before'])
 
 
 
 # ### Exercise 5 (max 5 points)
 #
 # Make a copy of the DataFrame `hib` in which you add a new column called `mass_loss` that represents the absolute mass lost during hibernation (bm_before - bm_after). Then, add another column called `mass_loss_percent` that represents the percentage of body mass lost relative to the pre-hibernation mass. Finally, filter the copy to keep only rows where the animal was reproductively active (repro_active == 'yes').
+hib2 = hib.copy()
+
+hib2['mass_loss'] = hib2['bm_before'] - hib2['bm_after']
+hib2['mass_loss_percent'] = hib2['mass_loss'] / hib2['bm_before'] * 100
+
+hib2 = hib2[hib2['repro_active']]
 
 
 
@@ -155,6 +162,23 @@ plt.show()
 # ### Exercise 7 (max 4 points)
 #
 # Plot a matrix of scatter plots (for each pair a,b you can plot just a,b and leave b,a empty) of all the combinations of `bm_before`, `bm_after`, `hibdur days`, and `age`. They should appear all in the same figure. Put also a proper title to each plot.
+vars_to_plot = ['bm_before', 'bm_after', 'hibdur days', 'age']
+n = len(vars_to_plot)
+
+fig, axes = plt.subplots(n, n, figsize=(10, 10))
+
+for i in range(n):
+    for j in range(n):
+        if i < j:
+            axes[i, j].scatter(hib[vars_to_plot[j]], hib[vars_to_plot[i]], alpha=0.5)
+            axes[i, j].set_xlabel(vars_to_plot[j])
+            axes[i, j].set_ylabel(vars_to_plot[i])
+            axes[i, j].set_title(f'{vars_to_plot[i]} vs {vars_to_plot[j]}')
+        else:
+            axes[i, j].axis('off')
+
+plt.tight_layout()
+plt.show()
 
 
 
@@ -168,6 +192,20 @@ plt.show()
 # - the mean of the observed value of `bm_after` is given by $\alpha + \beta \cdot D$ where D is the observed value of `hibdur days` (hibernation duration), its std deviation is $\sigma$
 #
 # Use PyMC to sample the posterior distributions after having seen the actual values for `bm_after`. Plot the posterior.
+D = hib['hibdur days'].values
+Y = hib['bm_after'].values
+
+with pm.Model() as model:
+    
+    alpha = pm.Normal('alpha', mu=150, sigma=50)
+    beta = pm.Normal('beta', mu=0, sigma=10)
+    sigma = pm.Exponential('sigma', lam=0.1)
+    
+    mu = alpha + beta * D
+    
+    bm_obs = pm.Normal('bm_obs', mu=mu, sigma=sigma, observed=Y)
+    
+    trace = pm.sample(2000, tune=1000, chains=2, target_accept=0.9)
 
 # Scatter plot: giorni di ibernazione vs età alla morte, colorato per sesso
 fig, ax = plt.subplots(figsize=(10, 6))
