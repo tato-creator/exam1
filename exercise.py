@@ -63,9 +63,7 @@ import arviz as az              # type: ignore
 # - age death: age at death
 # - repro_active: reproductive activity (yes/no)
 
-hib = pd.read_csv('hibernation.csv', 
-                  parse_dates=['hibstart', 'hibend', 'hibendyearbefore'],
-                  dayfirst=True)
+hib = pd.read_csv('hibernation.csv',parse_dates=['hibstart', 'hibend', 'hibendyearbefore'], dayfirst=True)
 hib['repro_active'] = hib['repro_active'] == 'yes'
 
 
