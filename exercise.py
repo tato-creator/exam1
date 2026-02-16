@@ -204,31 +204,3 @@ with pm.Model() as model:
     bm_obs = pm.Normal('bm_obs', mu=mu, sigma=sigma, observed=Y)
     
     trace = pm.sample(2000, tune=1000, chains=2, target_accept=0.9)
-
-# Scatter plot: giorni di ibernazione vs età alla morte, colorato per sesso
-fig, ax = plt.subplots(figsize=(10, 6))
-
-# Filtra i dati per rimuovere valori NaN in age_death
-hib_valid = hib.dropna(subset=['age death'])
-
-# Mappa sesso a colori: m -> blue, f -> red
-colors = hib_valid['sex'].map({'m': 'blue', 'f': 'red'})
-
-# Un'unica chiamata a scatter
-scatter = ax.scatter(hib_valid['hibdur days'], hib_valid['age death'], 
-                     c=colors, alpha=0.6, s=50)
-
-# Crea manualmente la legenda
-from matplotlib.patches import Patch
-legend_elements = [Patch(facecolor='blue', alpha=0.6, label='Maschi'),
-                   Patch(facecolor='red', alpha=0.6, label='Femmine')]
-ax.legend(handles=legend_elements)
-
-# Etichette e titolo
-ax.set_xlabel('Durata ibernazione (giorni)')
-ax.set_ylabel('Età alla morte (anni)')
-ax.set_title('Durata ibernazione vs Età alla morte per sesso')
-ax.grid(True, alpha=0.3)
-
-plt.tight_layout()
-plt.show()
